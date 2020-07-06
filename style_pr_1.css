@@ -1,0 +1,15 @@
+.tooltips {
+    position: fixed;
+    top: 10vh;
+    right: 3vw;
+}
+
+.tooltips h1 {
+    color: aliceblue;
+    font-size: 3vh;
+}
+
+.tooltips p {
+    color: aliceblue;
+    font-size: 2vh;
+}

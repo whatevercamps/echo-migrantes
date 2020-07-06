@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+    body {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        width: 960px;
+        height: 500px;
+        position: relative;
+    }
+
+    svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    path.slice {
+        stroke-width: 2px;
+    }
+
+    polyline {
+        opacity: .3;
+        stroke: black;
+        stroke-width: 2px;
+        fill: none;
+    }
+
+    .labelValue {
+        font-size: 60%;
+        opacity: .5;
+
+    }
+
+    .toolTip {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        position: absolute;
+        display: none;
+        width: auto;
+        height: auto;
+        background: none repeat scroll 0 0 white;
+        border: 0 none;
+        border-radius: 8px 8px 8px 8px;
+        box-shadow: -3px 3px 15px #888888;
+        color: black;
+        font: 12px sans-serif;
+        padding: 5px;
+        text-align: center;
+    }
+
+    text {
+        font: 12px sans-serif;
+    }
+</style>
+
+<body>
+    <form>
+        <label><input type="radio" name="dataset" id="dataset1" value="option1"> Perrache</label>
+        <label><input type="radio" name="dataset" id="dataset2" value="option2"> Part Dieu</label>
+    </form>
+
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script>
+
+
+        var svg = d3.select("body")
+            .append("svg")
+            .append("g")
+
+        svg.append("g")
+            .attr("class", "slices");
+        svg.append("g")
+            .attr("class", "labelName");
+        svg.append("g")
+            .attr("class", "labelValue");
+        svg.append("g")
+            .attr("class", "lines");
+
+        var width = 960,
+            height = 450,
+            radius = Math.min(width, height) / 2;
+
+        var pie = d3.pie()
+            .sort(null)
+            .value(function (d) {
+                return d.value;
+            });
+
+        var arc = d3.arc()
+            .outerRadius(radius * 0.8)
+            .innerRadius(radius * 0.4);
+
+        var outerArc = d3.arc()
+            .innerRadius(radius * 0.9)
+            .outerRadius(radius * 0.9);
+
+        var legendRectSize = (radius * 0.05);
+        var legendSpacing = radius * 0.02;
+
+
+        var div = d3.select("body").append("div").attr("class", "toolTip");
+
+        svg.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+        var colorRange = d3.scaleOrdinal(d3.schemeCategory10);
+        var color = d3.scaleOrdinal()
+            .range(colorRange.range());
+
+
+
+        datasetOption2 = [{
+            "label": "venezolano",
+            "value": 185,
+            "percentage": 0.8851674641148325
+        },
+        {
+            "label": "colombo venezolano",
+            "value": 23,
+            "percentage": 0.11004784688995216
+        },
+        {
+            "label": "venezolano - otra nacionalidad",
+            "value": 1,
+            "percentage": 0.004784688995215311
+        }
+        ];
+
+        datasetOption1 = [
+        {
+            "label": "si",
+            "value": 143,
+            "percentage": 0.6842105263157895
+        },
+        {
+            "label": "no",
+            "value": 66,
+            "percentage": 0.3157894736842105
+        }
+        ];
+
+        d3.selectAll("input")
+            .on("change", selectDataset);
+
+        function selectDataset() {
+            var value = this.value;
+            //var value = d3.select('input[name="dataset"]:checked').node().value;
+
+            if (value == "option1") {
+                change(datasetOption1);
+                change(datasetOption1);
+            }
+            else if (value == "option2") {
+                
+                change(datasetOption2);
+                change(datasetOption2);
+            }
+        }
+
+        function change(data) {
+
+            /* ------- PIE SLICES -------*/
+            
+            var slice = svg.select(".slices").selectAll("path.slice")
+                .data(pie(data), function (d) { return d.data.label });
+
+            slice.enter()
+                .insert("path")
+                .style("fill", function (d) { return color(d.data.label); })
+                .attr("class", "slice");
+
+            slice
+                .transition().duration(1000)
+                .attrTween("d", function (d) {
+                    this._current = this._current || d;
+                    var interpolate = d3.interpolate(this._current, d);
+                    this._current = interpolate(0);
+                    return function (t) {
+                        return arc(interpolate(t));
+                    };
+                })
+            slice
+                .on("mousemove", function (d) {
+                    div.style("left", d3.event.pageX + 10 + "px");
+                    div.style("top", d3.event.pageY - 25 + "px");
+                    div.style("display", "inline-block");
+                    div.html((d.data.label) + "<br>" + (d.data.value) + "%");
+                });
+            slice
+                .on("mouseout", function (d) {
+                    div.style("display", "none");
+                });
+
+            slice.exit()
+                .remove();
+
+
+            /* ------- TEXT LABELS -------*/
+
+            var text = svg.select(".labelName").selectAll("text")
+                .data(pie(data), function (d) { return d.data.label });
+
+            text.enter()
+                .append("text")
+                .attr("dy", ".35em")
+                .text(function (d) {
+                    return (d.data.label + ": " + d.percentage*100 + "%");
+                });
+
+            function midAngle(d) {
+                return d.startAngle + (d.endAngle - d.startAngle) / 2;
+            }
+
+            text
+                .transition().duration(1000)
+                .attrTween("transform", function (d) {
+                    this._current = this._current || d;
+                    var interpolate = d3.interpolate(this._current, d);
+                    this._current = interpolate(0);
+                    return function (t) {
+                        var d2 = interpolate(t);
+                        var pos = outerArc.centroid(d2);
+                        pos[0] = radius * (midAngle(d2) < Math.PI ? 1 : -1);
+                        return "translate(" + pos + ")";
+                    };
+                })
+                .styleTween("text-anchor", function (d) {
+                    this._current = this._current || d;
+                    var interpolate = d3.interpolate(this._current, d);
+                    this._current = interpolate(0);
+                    return function (t) {
+                        var d2 = interpolate(t);
+                        return midAngle(d2) < Math.PI ? "start" : "end";
+                    };
+                })
+                .text(function (d) {
+                    
+                    return (d.data.label + ": " + 100*d.data.percentage.toFixed(3) + "%");
+                });
+
+
+            text.exit()
+                .remove();
+
+            /* ------- SLICE TO TEXT POLYLINES -------*/
+
+            var polyline = svg.select(".lines").selectAll("polyline")
+                .data(pie(data), function (d) { return d.data.label });
+
+            polyline.enter()
+                .append("polyline");
+
+            polyline.transition().duration(1000)
+                .attrTween("points", function (d) {
+                    this._current = this._current || d;
+                    var interpolate = d3.interpolate(this._current, d);
+                    this._current = interpolate(0);
+                    return function (t) {
+                        var d2 = interpolate(t);
+                        var pos = outerArc.centroid(d2);
+                        pos[0] = radius * 0.95 * (midAngle(d2) < Math.PI ? 1 : -1);
+                        return [arc.centroid(d2), outerArc.centroid(d2), pos];
+                    };
+                });
+
+            polyline.exit()
+                .remove();
+        };
+
+    </script>
+</body>
